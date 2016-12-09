@@ -34,20 +34,23 @@ class AliasManager(models.Manager):
     def get_queryset(self):
         return super(AliasManager, self).get_queryset().select_related('site')
 
-    def resolve(self, host, port=None):
+    def resolve(self, host, port=None, path=None):
         """
-        Returns the Alias that best matches ``host`` and ``port``, or None.
+        Returns the Alias that best matches ``host`` and ``port`` and ``path``,
+        or None.
 
         ``host`` is a hostname like ``'example.com'``.
         ``port`` is a port number like 8000, or None.
+        ``path`` is the first part of the path after the / in a url scheme
+        where, site is denoted by path, like 'foo'
 
-        Attempts to first match by 'host:port' against
+        Attempts to first match by 'host:port' or 'host:port/path' against
         Alias.domain. If that fails, it will try to match the bare
         'host' with no port number.
 
         All comparisons are done case-insensitively.
         """
-        domains = self._expand_netloc(host=host, port=port)
+        domains = self._expand_netloc(host=host, port=port, path=path)
         q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
         aliases = dict((a.domain, a) for a in self.get_queryset().filter(q))
         for domain in domains:
@@ -57,12 +60,13 @@ class AliasManager(models.Manager):
                 pass
 
     @classmethod
-    def _expand_netloc(cls, host, port=None):
+    def _expand_netloc(cls, host, port=None, path=None):
         """
         Returns a list of possible domain expansions for ``host`` and ``port``.
 
         ``host`` is a hostname like ``'example.com'``.
         ``port`` is a port number like 8000, or None.
+        ``path`` is the first part of the path after the /, like 'foo'
 
         Expansions are ordered from highest to lowest preference and may
         include wildcards. Examples::
@@ -70,11 +74,20 @@ class AliasManager(models.Manager):
         >>> AliasManager._expand_netloc('www.example.com')
         ['www.example.com', '*.example.com', '*.com', '*']
 
+        >>> AliasManager._expand_netloc('www.example.com', path='foo')
+        ['www.example.com/foo', '*.example.com/foo', '*.com/foo', '*']
+
         >>> AliasManager._expand_netloc('www.example.com', 80)
         ['www.example.com:80', 'www.example.com',
          '*.example.com:80', '*.example.com',
          '*.com:80', '*.com',
          '*:80', '*']
+
+        >>> AliasManager._expand_netloc('www.example.com', 80, 'foo')
+        ['www.example.com:80/foo', 'www.example.com/foo',
+         '*.example.com:80/foo', '*.example.com/foo',
+         '*.com:80/foo', '*.com/foo',
+         '*:80/foo', '*/foo']
         """
         if not host:
             raise ValueError(u"Invalid host: %s" % host)
@@ -92,9 +105,16 @@ class AliasManager(models.Manager):
                 host = '.'.join(bits[i:])
             else:
                 host = '.'.join(['*'] + bits[i:])
+            host_with_port = None
             if port:
-                result.append("%s:%s" % (host, port))
+                host_with_port = "%s:%s" % (host, port)
+            if path:
+                host = "%s/%s" % (host, path)
+                host_with_port = "%s/%s" % (host_with_port, path)
+            if host_with_port:
+                result.append(host_with_port)
             result.append(host)
+
         return result
 
 

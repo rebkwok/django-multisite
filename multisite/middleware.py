@@ -98,14 +98,15 @@ class DynamicSiteMiddleware(object):
                 # Fallback to the first Site object
                 return Alias.canonical.order_by('site')[0]
 
-    def get_alias(self, netloc):
+    def get_alias(self, netloc, path=None):
         """
         Returns Alias matching ``netloc``. Otherwise, returns None.
         """
         host, port = self.netloc_parse(netloc)
-
+        if path:
+            path = path.split('/')[1]
         try:
-            alias = Alias.objects.resolve(host=host, port=port)
+            alias = Alias.objects.resolve(host=host, port=port, path=path)
         except ValueError:
             alias = None
 
@@ -160,8 +161,15 @@ class DynamicSiteMiddleware(object):
         return HttpResponsePermanentRedirect(url)
 
     def process_request(self, request):
+
+        use_site_path = getattr(settings, 'MULTISITE_USE_SITE_PATHS', False)
+
         netloc = request.get_host().lower()
-        cache_key = self.get_cache_key(netloc)
+        if use_site_path:
+            cache_key_base = '/'.join([netloc, request.path.split('/')[1]])
+        else:
+            cache_key_base = netloc
+        cache_key = self.get_cache_key(cache_key_base)
 
         # Find the Alias in the cache
         alias = self.cache.get(cache_key)
@@ -171,7 +179,8 @@ class DynamicSiteMiddleware(object):
             return self.redirect_to_canonical(request, alias)
 
         # Cache missed
-        alias = self.get_alias(netloc)
+        path = request.path if use_site_path else None
+        alias = self.get_alias(netloc, path)
 
         # Fallback using settings.MULTISITE_FALLBACK
         if alias is None:

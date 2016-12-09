@@ -74,6 +74,24 @@ If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*
     }
 
 
+Site paths
+----------
+If your sites are determined by path rather than subdomain; ``example.com/foo``
+rather than ``foo.example.com```::
+
+    # Default: False
+    MULTISITE_USE_SITE_PATHS = True
+
+
+Your project's urlpatterns must all be prefixed with the site name.  e.g. in
+base urls.py, prefix each url pattern with `.+`::
+
+    urlpatterns = [
+        url(r'^.+/admin/', include(admin.site.urls)),
+        url(r'^.+/home/', views.home),
+    ]
+
+
 Domain fallbacks
 ----------------
 
