@@ -9,4 +9,14 @@ python:
 
 install:
   - pip install tox-travis
-script: tox
+  - pip install coverage
+  - pip install python-coveralls
+
+script:
+  - tox
+#  - if [ $TRAVIS_PYTHON_VERSION = '3.5' ]; then coverage run --source multisite --omit multisite/migrations/*,multisite/south_migrations/*,multisite/tests.py setup.py test; fi
+#
+after_success:
+#  # run coverage once only
+#  - if [ $TRAVIS_PYTHON_VERSION = '3.5' ]; then coveralls; fi
+  - coveralls

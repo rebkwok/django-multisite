@@ -1,5 +1,8 @@
-.. image:: https://travis-ci.org/ecometrica/django-multisite.svg?branch=master
-    :target: https://travis-ci.org/ecometrica/django-multisite
+.. image:: https://travis-ci.org/rebkwok/django-multisite.svg?branch=coveralls
+    :target: https://travis-ci.org/rebkwok/django-multisite?branch=coveralls
+.. image:: https://coveralls.io/repos/github/rebkwok/django-multisite/badge.svg?branch=coveralls
+    :target: https://coveralls.io/github/rebkwok/django-multisite?branch=coveralls
+
 
 README
 ======
